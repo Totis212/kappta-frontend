@@ -1,0 +1,432 @@
+<!-- ===== LOGIN ===== -->
+<div *ngIf="!usuarioActual" class="login-container">
+  <div class="login-card">
+    <h2><i class="fa-solid fa-wallet"></i> Kappta</h2>
+    <p class="login-subtitle">Control de gastos con el método de sobres</p>
+
+    <!-- LOGIN -->
+    <div *ngIf="!mostrandoRegistro; else registroForm">
+      <input class="form-control" type="text" placeholder="Usuario" [(ngModel)]="loginUsername">
+      <input class="form-control" type="password" placeholder="Contraseña" [(ngModel)]="loginPassword">
+      <button class="btn-login" (click)="iniciarSesion()">
+        <i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión
+      </button>
+      <p class="login-toggle">¿No tienes cuenta? <a (click)="mostrandoRegistro = true">Regístrate</a></p>
+    </div>
+
+    <!-- REGISTRO -->
+    <ng-template #registroForm>
+      <input class="form-control" type="text" placeholder="Nuevo usuario" [(ngModel)]="registroUsername">
+      <input class="form-control" type="password" placeholder="Contraseña" [(ngModel)]="registroPassword">
+      <button class="btn-login" (click)="registrarse()">
+        <i class="fa-solid fa-user-plus"></i> Crear cuenta
+      </button>
+      <p class="login-toggle">¿Ya tienes cuenta? <a (click)="mostrandoRegistro = false">Inicia sesión</a></p>
+    </ng-template>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div *ngIf="usuarioActual">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <i class="fa-solid fa-wallet"></i> Kappta
+    </div>
+    <div class="navbar-user">
+      <span><i class="fa-solid fa-circle-user"></i> {{usuarioActual.username}}</span>
+      <button class="btn-logout" (click)="cerrarSesion()">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Salir
+      </button>
+    </div>
+  </nav>
+
+  <div class="main-container">
+
+    <!-- NOTIFICACIONES -->
+    <div *ngIf="getNotificaciones().length > 0" class="notifications-bar">
+      <div *ngFor="let n of getNotificaciones()" class="notification-item notification-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{n}}
+      </div>
+    </div>
+
+    <!-- NÓMINA -->
+    <div class="nomina-section">
+      <div class="nomina-header">
+        <h4 class="section-title"><i class="fa-solid fa-money-bill-wave"></i> Mi Nómina</h4>
+        <button *ngIf="!mostrandoNomina" class="btn-section btn-primary btn-sm" (click)="verNomina()">
+          <i class="fa-solid fa-pen"></i> Configurar
+        </button>
+      </div>
+
+      <div *ngIf="usuarioActual.nomina" class="nomina-info">
+        <span class="nomina-badge"><i class="fa-solid fa-sack-dollar"></i> ${{usuarioActual.nomina | number:'1.2-2'}} {{usuarioActual.periodo}}</span>
+        <button class="btn-section btn-accent btn-sm" (click)="moverSobranteAhorro()">
+          <i class="fa-solid fa-piggy-bank"></i> Mover sobrante
+        </button>
+      </div>
+
+      <div *ngIf="mostrandoNomina" class="form-modal" style="margin-top:16px; box-shadow:none; padding:0;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Monto</label>
+            <input class="form-control" type="number" placeholder="Ej: 10000" [(ngModel)]="nomina">
+          </div>
+          <div class="form-group">
+            <label>Periodo</label>
+            <select class="form-control" [(ngModel)]="periodo">
+              <option value="semanal">Semanal</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn-section btn-primary btn-sm" (click)="calcularRecomendaciones()">
+            <i class="fa-solid fa-calculator"></i> Calcular
+          </button>
+          <button class="btn-section btn-secondary btn-sm" (click)="mostrandoNomina = false">Cancelar</button>
+        </div>
+
+        <!-- RECOMENDACIONES -->
+        <div *ngIf="recomendaciones.length > 0" style="margin-top:16px;">
+          <h5 style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-lightbulb" style="color:#FECA57;"></i> Recomendación de distribución</h5>
+          <div class="categorias-grid">
+            <div *ngFor="let r of recomendaciones" class="categoria-check" [class.selected]="categoriasSeleccionadas.includes(r.id)" (click)="toggleCategoriaSeleccion(r.id)">
+              <i [class]="categoriasSeleccionadas.includes(r.id) ? 'fa-solid fa-square-check' : 'fa-regular fa-square'"></i>
+              {{r.nombre}} - {{r.porcentaje}}% (${{r.monto | number:'1.2-2'}})
+            </div>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button class="btn-section btn-success btn-sm" (click)="aceptarRecomendacion()">
+              <i class="fa-solid fa-check"></i> Aplicar distribución
+            </button>
+            <button class="btn-section btn-secondary btn-sm" (click)="recomendaciones = []; mostrandoNomina = false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+      <button class="btn-section btn-primary" (click)="verNuevaCategoria()">
+        <i class="fa-solid fa-plus"></i> Nuevo sobre
+      </button>
+      <button class="btn-section btn-success" (click)="mostrandoFormGasto = !mostrandoFormGasto">
+        <i class="fa-solid fa-receipt"></i> Agregar gasto
+      </button>
+      <button class="btn-section btn-secondary" (click)="verGrafica()">
+        <i class="fa-solid fa-chart-pie"></i> Pastel
+      </button>
+      <button class="btn-section btn-secondary" (click)="verGraficaBarras()">
+        <i class="fa-solid fa-chart-bar"></i> Barras
+      </button>
+      <button class="btn-section btn-secondary" (click)="verFiltro()">
+        <i class="fa-solid fa-filter"></i> Filtrar
+      </button>
+      <button class="btn-section btn-secondary" (click)="verReportes()">
+        <i class="fa-solid fa-chart-line"></i> Reportes
+      </button>
+      <button class="btn-section btn-secondary" (click)="exportarPDF()">
+        <i class="fa-solid fa-file-pdf"></i> PDF
+      </button>
+      <button class="btn-section btn-secondary" (click)="exportarExcel()">
+        <i class="fa-solid fa-file-excel"></i> Excel
+      </button>
+    </div>
+
+    <!-- FORM NUEVA CATEGORÍA -->
+    <div *ngIf="mostrandoNuevaCategoria" class="form-modal">
+      <h4><i class="fa-solid fa-folder-plus" style="color:var(--primary)"></i> Nuevo sobre</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input class="form-control" type="text" placeholder="Ej: Transporte" [(ngModel)]="nuevaCategoriaNombre">
+        </div>
+        <div class="form-group">
+          <label>Presupuesto</label>
+          <input class="form-control" type="number" placeholder="Ej: 2000" [(ngModel)]="nuevaCategoriaPresupuesto">
+        </div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn-section btn-primary btn-sm" (click)="crearCategoria()">
+          <i class="fa-solid fa-plus"></i> Crear
+        </button>
+        <button class="btn-section btn-secondary btn-sm" (click)="mostrandoNuevaCategoria = false">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- FORM AGREGAR GASTO -->
+    <div *ngIf="mostrandoFormGasto" class="form-modal">
+      <h4><i class="fa-solid fa-receipt" style="color:var(--success)"></i> Agregar gasto</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría</label>
+          <select class="form-control" [(ngModel)]="nuevoGasto.categoriaId">
+            <option *ngFor="let c of categorias" [value]="c.id">{{c.nombre}}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <input class="form-control" type="text" placeholder="Ej: Supermercado" [(ngModel)]="nuevoGasto.descripcion">
+        </div>
+        <div class="form-group">
+          <label>Monto</label>
+          <input class="form-control" type="number" placeholder="Ej: 500" [(ngModel)]="nuevoGasto.monto">
+        </div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn-section btn-success btn-sm" (click)="agregarGasto()">
+          <i class="fa-solid fa-plus"></i> Agregar
+        </button>
+        <button class="btn-section btn-secondary btn-sm" (click)="mostrandoFormGasto = false">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- GRÁFICA DE PASTEL -->
+    <div *ngIf="mostrandoGrafica" class="chart-container">
+      <h4><i class="fa-solid fa-chart-pie"></i> Distribución de gastos</h4>
+      <canvas id="graficaGastos" width="300" height="300"></canvas>
+    </div>
+
+    <!-- GRÁFICA DE BARRAS -->
+    <div *ngIf="mostrandoBarras" class="chart-container">
+      <h4><i class="fa-solid fa-chart-bar"></i> Presupuesto vs Gastado</h4>
+      <canvas id="graficaBarras" width="400" height="300"></canvas>
+    </div>
+
+    <!-- FILTRO FECHAS -->
+    <div *ngIf="mostrandoFiltro" class="form-modal">
+      <h4><i class="fa-solid fa-calendar-days" style="color:var(--primary)"></i> Filtrar por fecha</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Desde</label>
+          <input class="form-control" type="date" [(ngModel)]="fechaInicio">
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input class="form-control" type="date" [(ngModel)]="fechaFin">
+        </div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn-section btn-primary btn-sm" (click)="filtrarGastos()">
+          <i class="fa-solid fa-search"></i> Buscar
+        </button>
+        <button class="btn-section btn-secondary btn-sm" (click)="verFiltro()">Cancelar</button>
+      </div>
+
+      <div *ngIf="gastosFiltrados.length > 0" style="margin-top:16px; overflow-x:auto;">
+        <table class="filter-table">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th>Monto</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let g of gastosFiltrados">
+              <td>{{g.categoria}}</td>
+              <td>{{g.descripcion}}</td>
+              <td>${{g.monto | number:'1.2-2'}}</td>
+              <td>{{g.fecha}}</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="2"><strong>TOTAL</strong></td>
+              <td colspan="2"><strong>${{totalFiltrado() | number:'1.2-2'}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REPORTES -->
+    <div *ngIf="mostrandoReportes" class="chart-container">
+      <h4><i class="fa-solid fa-chart-line"></i> Historial de Gastos</h4>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+        <button class="btn-section btn-sm" [class.btn-primary]="tipoReporte === 'mensual'" [class.btn-secondary]="tipoReporte !== 'mensual'" (click)="tipoReporte = 'mensual'">
+          <i class="fa-solid fa-calendar"></i> Mensual
+        </button>
+        <button class="btn-section btn-sm" [class.btn-primary]="tipoReporte === 'semanal'" [class.btn-secondary]="tipoReporte !== 'semanal'" (click)="tipoReporte = 'semanal'">
+          <i class="fa-solid fa-calendar-week"></i> Semanal
+        </button>
+        <button class="btn-section btn-secondary btn-sm" (click)="mostrandoReportes = false" style="margin-left:auto;">
+          <i class="fa-solid fa-xmark"></i> Cerrar
+        </button>
+      </div>
+
+      <!-- REPORTE MENSUAL -->
+      <div *ngIf="tipoReporte === 'mensual' && reporteMensual.length > 0" style="overflow-x:auto;">
+        <table class="filter-table">
+          <thead>
+            <tr>
+              <th>Mes</th>
+              <th>Categoría</th>
+              <th>Presupuesto</th>
+              <th>Gastado</th>
+              <th>Disponible</th>
+              <th>% Usado</th>
+              <th>Gastos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of reporteMensual">
+              <td>{{getNombreMes(r.mes)}} {{r.anio}}</td>
+              <td>{{r.categoria}}</td>
+              <td>${{r.presupuesto | number:'1.2-2'}}</td>
+              <td style="color:var(--danger); font-weight:600;">${{r.totalGastado | number:'1.2-2'}}</td>
+              <td [style.color]="r.disponible >= 0 ? 'var(--success)' : 'var(--danger)'" style="font-weight:600;">${{r.disponible | number:'1.2-2'}}</td>
+              <td>
+                <span style="padding:4px 8px; border-radius:12px; font-size:12px; font-weight:600;"
+                  [style.background]="r.porcentaje >= 100 ? '#FFEBEE' : r.porcentaje >= 75 ? '#FFF3E0' : '#E8F5E9'"
+                  [style.color]="r.porcentaje >= 100 ? '#C62828' : r.porcentaje >= 75 ? '#E65100' : '#2E7D32'">
+                  {{r.porcentaje}}%
+                </span>
+              </td>
+              <td>{{r.numGastos}}</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="3"><strong>TOTAL GASTADO</strong></td>
+              <td colspan="4"><strong>${{totalMensual() | number:'1.2-2'}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- REPORTE SEMANAL -->
+      <div *ngIf="tipoReporte === 'semanal' && reporteSemanal.length > 0" style="overflow-x:auto;">
+        <table class="filter-table">
+          <thead>
+            <tr>
+              <th>Semana</th>
+              <th>Categoría</th>
+              <th>Gastado</th>
+              <th>Núm. Gastos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of reporteSemanal">
+              <td>Semana {{r.semana}} - {{r.anio}}</td>
+              <td>{{r.categoria}}</td>
+              <td style="color:var(--danger); font-weight:600;">${{r.totalGastado | number:'1.2-2'}}</td>
+              <td>{{r.numGastos}}</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="2"><strong>TOTAL GASTADO</strong></td>
+              <td colspan="2"><strong>${{totalSemanal() | number:'1.2-2'}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SIN DATOS -->
+      <div *ngIf="(tipoReporte === 'mensual' && reporteMensual.length === 0) || (tipoReporte === 'semanal' && reporteSemanal.length === 0)" class="empty-state">
+        <i class="fa-solid fa-chart-line"></i>
+        <p>No hay datos de gastos para mostrar</p>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE SOBRES -->
+    <div class="section-header">
+      <h3 class="section-title"><i class="fa-solid fa-envelope"></i> Mis Sobres</h3>
+    </div>
+
+    <div class="cards-grid">
+      <div *ngFor="let cat of categorias" class="category-card">
+        <div class="card-header">
+          <span class="card-title">{{cat.nombre}}</span>
+          <div class="card-actions">
+            <button class="btn-icon btn-icon-edit" (click)="editarPresupuesto(cat)" title="Editar presupuesto">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- EDICIÓN PRESUPUESTO -->
+        <div *ngIf="editandoPresupuesto === cat.id" style="margin-bottom:12px;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input class="edit-input" type="number" [(ngModel)]="nuevoPresupuesto">
+            <button class="btn-section btn-success btn-sm" (click)="guardarPresupuesto(cat.id)">✓</button>
+            <button class="btn-section btn-secondary btn-sm" (click)="cancelarEdicion()">✗</button>
+          </div>
+        </div>
+
+        <div class="card-amounts">
+          <span class="amount-spent"><i class="fa-solid fa-arrow-trend-down"></i> ${{cat.gastado | number:'1.2-2'}}</span>
+          <span class="amount-available"><i class="fa-solid fa-check-circle"></i> ${{cat.disponible | number:'1.2-2'}}</span>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" [class.progress-verde]="getClaseBarra(cat) === 'barra-verde'" [class.progress-amarilla]="getClaseBarra(cat) === 'barra-amarilla'" [class.progress-roja]="getClaseBarra(cat) === 'barra-roja'" [style.width.%]="getPorcentaje(cat) > 100 ? 100 : getPorcentaje(cat)"></div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button class="btn-section btn-danger btn-sm" (click)="verGastos(cat.id)">
+            <i class="fa-solid fa-eye"></i> Ver gastos
+          </button>
+          <button class="btn-section btn-accent btn-sm" (click)="verGrafica()">
+            <i class="fa-solid fa-chart-pie"></i> Gráfica
+          </button>
+        </div>
+
+        <!-- LISTA DE GASTOS -->
+        <div *ngIf="categoriaSeleccionada === cat.id && gastosDetalle.length > 0" class="expense-list">
+          <div *ngFor="let g of gastosDetalle" class="expense-item">
+            <div class="expense-info">
+              <span class="expense-desc">{{g.descripcion}}</span>
+              <span class="expense-date">{{g.fecha}}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="expense-amount">${{g.monto | number:'1.2-2'}}</span>
+              <button class="btn-icon btn-icon-danger" (click)="eliminarGasto(g.id)" title="Eliminar">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TARJETA DE AHORRO -->
+      <div *ngIf="ahorro" class="ahorro-card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-piggy-bank"></i> Ahorro</span>
+        </div>
+        <div class="ahorro-meta" *ngIf="ahorro.meta > 0">
+          Meta: ${{ahorro.meta | number:'1.2-2'}}
+        </div>
+        <div *ngIf="ahorro.meta === 0" class="ahorro-meta">Sin meta definida</div>
+        <div class="ahorro-amount">${{ahorro.acumulado | number:'1.2-2'}}</div>
+        <div *ngIf="ahorro.meta > 0" class="ahorro-progress-bg">
+          <div class="ahorro-progress-fill" [style.width.%]="getPorcentajeAhorro() > 100 ? 100 : getPorcentajeAhorro()"></div>
+        </div>
+        <div *ngIf="ahorro.meta > 0" style="font-size:12px; margin-top:6px; color:rgba(255,255,255,0.6);">
+          {{getPorcentajeAhorro() | number:'1.0-0'}}% de tu meta
+        </div>
+        <div class="ahorro-actions">
+          <button class="btn-section btn-success btn-sm" (click)="verAhorro()">
+            <i class="fa-solid fa-bullseye"></i> Configurar meta
+          </button>
+          <button class="btn-section btn-accent btn-sm" (click)="moverSobranteAhorro()">
+            <i class="fa-solid fa-hand-holding-dollar"></i> Mover sobrante
+          </button>
+        </div>
+
+        <!-- FORM META DE AHORRO -->
+        <div *ngIf="mostrandoAhorro" style="margin-top:12px;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input class="edit-input" type="number" placeholder="Meta" [(ngModel)]="nuevaMetaAhorro" style="width:120px;">
+            <button class="btn-section btn-success btn-sm" (click)="guardarMetaAhorro()">✓</button>
+            <button class="btn-section btn-secondary btn-sm" (click)="mostrandoAhorro = false">✗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
