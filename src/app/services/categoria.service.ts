@@ -8,9 +8,9 @@ import { Gasto } from '../models/gasto.model';
   providedIn: 'root'
 })
 export class CategoriaService {
-  private apiUrl = 'http://localhost:5000/api/categorias';
-  private gastosUrl = 'http://localhost:5000/api/gastos';
-  private baseUrl = 'http://localhost:5000/api';
+  private apiUrl = 'https://kappta-backend.onrender.com/api/categorias';
+  private gastosUrl = 'https://kappta-backend.onrender.com/api/gastos';
+  private baseUrl = 'https://kappta-backend.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
@@ -39,19 +39,19 @@ export class CategoriaService {
   }
 
   getGastosPorFecha(inicio?: string, fin?: string): Observable<any[]> {
-  let url = 'http://localhost:5000/api/gastos/fecha';
-  if (inicio && fin) {
-    url += `?inicio=${inicio}&fin=${fin}`;
-  }
-  return this.http.get<any[]>(url);
+    let url = `${this.baseUrl}/gastos/fecha`;
+    if (inicio && fin) {
+      url += `?inicio=${inicio}&fin=${fin}`;
+    }
+    return this.http.get<any[]>(url);
   }
 
   login(username: string, password: string): Observable<any> {
-  return this.http.post('http://localhost:5000/api/login', { username, password });
+    return this.http.post(`${this.baseUrl}/login`, { username, password });
   }
 
   registro(username: string, password: string): Observable<any> {
-    return this.http.post('http://localhost:5000/api/registro', { username, password });
+    return this.http.post(`${this.baseUrl}/registro`, { username, password });
   }
 
   crearCategoria(nombre: string, presupuesto: number, usuarioId: number): Observable<any> {
@@ -59,15 +59,15 @@ export class CategoriaService {
   }
 
   guardarNomina(usuarioId: number, nomina: number, periodo: string): Observable<any> {
-    return this.http.put(`http://localhost:5000/api/usuarios/${usuarioId}/nomina`, { nomina, periodo });
+    return this.http.put(`${this.baseUrl}/usuarios/${usuarioId}/nomina`, { nomina, periodo });
   }
 
   crearSobresRecomendados(usuarioId: number, nomina: number): Observable<any> {
-    return this.http.post(`http://localhost:5000/api/usuarios/${usuarioId}/recomendar`, { nomina });
+    return this.http.post(`${this.baseUrl}/usuarios/${usuarioId}/recomendar`, { nomina });
   }
 
   distribuirNomina(usuarioId: number, nomina: number, categoriasIds: number[]): Observable<any> {
-    return this.http.post(`http://localhost:5000/api/usuarios/${usuarioId}/distribuir`, { nomina, categoriasIds });
+    return this.http.post(`${this.baseUrl}/usuarios/${usuarioId}/distribuir`, { nomina, categoriasIds });
   }
 
   getAhorro(usuarioId: number) {
